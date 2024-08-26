@@ -49,7 +49,10 @@
           # Additional dev-shell environment variables can be set directly
           # MY_CUSTOM_DEVELOPMENT_VAR = "something else";
 
-          packages = [ ];
+          packages = with pkgs; [
+            rust-analyzer
+            lldb
+          ];
         };
       });
 }
