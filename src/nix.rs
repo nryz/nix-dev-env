@@ -20,6 +20,15 @@ impl BashFunctionsType {
     }
 }
 
+impl<'a> IntoIterator for &'a BashFunctionsType {
+    type Item = <&'a HashMap<String, String> as IntoIterator>::Item;
+    type IntoIter = <&'a HashMap<String, String> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.0).into_iter()
+    }
+}
+
 impl From<HashMap<String, String>> for BashFunctionsType {
     fn from(val: HashMap<String, String>) -> BashFunctionsType {
         BashFunctionsType(val)
