@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Context, Error, Result};
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use config::Config;
 use nix::Env;
-use shell::{start_shell, ShellType};
+use shell::start_shell;
 use std::{
     fs::{self, File},
     io::BufReader,
@@ -23,8 +23,8 @@ struct Cli {
 
     /// Which shell to start.
     /// If this isn't specified, use SHELL from env.
-    #[arg(short, long, value_enum, verbatim_doc_comment)]
-    shell: Option<ShellType>,
+    #[arg(short, long, verbatim_doc_comment)]
+    shell: Option<String>,
 
     /// path to the json config file.
     /// config_file and config_str will be merged.
@@ -115,12 +115,10 @@ fn main() -> Result<(), Error> {
             .ok_or("failed to convert file name to str")
             .map_err(|e| anyhow!(e))?;
 
-        ShellType::from_str(shell, true)
-            .map_err(|e| anyhow!(e))
-            .context("SHELL env has unknown type")?
+        shell.to_string()
     };
 
-    start_shell(&env, shell, args.print).context("Failed to start the shell")?;
+    start_shell(&env, &shell, args.print).context("Failed to start the shell")?;
 
     Ok(())
 }

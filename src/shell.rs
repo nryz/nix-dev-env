@@ -6,14 +6,6 @@ use std::env;
 use std::io::stdout;
 use std::io::Write;
 use std::{os::unix::process::CommandExt, process::Command};
-use strum_macros::AsRefStr;
-
-#[derive(clap::ValueEnum, Clone, Debug, AsRefStr)]
-#[strum(serialize_all = "lowercase")]
-pub enum ShellType {
-    Bash,
-    Zsh,
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type", rename_all = "camelCase")]
@@ -32,8 +24,8 @@ pub fn combine_path(a: String, b: &str, split: &str) -> String {
     }
 }
 
-pub fn start_shell(env: &FinalEnv, shell: ShellType, only_print: bool) -> Result<(), Error> {
-    let mut command = Command::new(shell.as_ref());
+pub fn start_shell(env: &FinalEnv, shell: &String, only_print: bool) -> Result<(), Error> {
+    let mut command = Command::new(shell);
 
     for (k, v) in &env.variables {
         command.env(k, v);
@@ -54,6 +46,7 @@ pub fn start_shell(env: &FinalEnv, shell: ShellType, only_print: bool) -> Result
 
         Ok(())
     } else {
+        println!("starting shell: {}", shell);
         Err(command.exec().into())
     }
 }

@@ -106,12 +106,21 @@ pub fn filter(
 
     let env = filter_raw(env, filter_file, filter_str, &path_var_names)?;
 
-    if let Some(config) = config_file {
+    if config_file.is_none() && config_str.is_none() {
+        let config: Config = Config {
+            path_vars: Vec::new(),
+            paths: HashMap::new(),
+            variables: Vec::new(),
+        };
         filter_config(&env, config, &path_var_names, &mut res);
-    }
+    } else {
+        if let Some(config) = config_file {
+            filter_config(&env, config, &path_var_names, &mut res);
+        }
 
-    if let Some(config) = config_str {
-        filter_config(&env, config, &path_var_names, &mut res);
+        if let Some(config) = config_str {
+            filter_config(&env, config, &path_var_names, &mut res);
+        }
     }
 
     Ok(res)
