@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashMap, env, path::PathBuf};
+use std::{collections::HashMap, env, path::Path};
 
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
@@ -18,12 +18,12 @@ pub struct FinalEnv {
 
 impl fmt::Display for FinalEnv {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "paths: \n")?;
+        writeln!(f, "paths: ")?;
         for (k, v) in self.paths.iter() {
             write!(f, "\n{} = \"{}\"", k, v)?
         }
 
-        write!(f, "variables: \n")?;
+        writeln!(f, "variables: ")?;
         for (k, v) in self.variables.iter() {
             write!(f, "\n{} = \"{}\"", k, v)?
         }
@@ -35,7 +35,7 @@ fn variable_filter(
     key: &String,
     value: &mut VariableValue,
     filter: &VariablesType,
-    path_var_names: &Vec<String>,
+    path_var_names: &[String],
 ) -> bool {
     if let Some(f_value) = filter.get(key) {
         use VariableValue::*;
@@ -62,20 +62,20 @@ fn variable_filter(
         }
     }
 
-    return true;
+    true
 }
 
 fn variable_filter_empty(_: &String, value: &mut VariableValue) -> bool {
     match value {
-        VariableValue::Exported { value } => return !value.is_empty(),
-        VariableValue::Var { value } => return !value.is_empty(),
-        VariableValue::Array { value } => return !value.is_empty(),
-        VariableValue::Associative { value } => return !value.is_empty(),
+        VariableValue::Exported { value } => !value.is_empty(),
+        VariableValue::Var { value } => !value.is_empty(),
+        VariableValue::Array { value } => !value.is_empty(),
+        VariableValue::Associative { value } => !value.is_empty(),
     }
 }
 
 fn function_filter(key: &String, _: &mut String, filter: &BashFunctionsType) -> bool {
-    return !filter.contains(key);
+    !filter.contains(key)
 }
 
 fn function_filter_empty(_: &String, value: &mut String) -> bool {
@@ -126,7 +126,7 @@ pub fn filter(
     Ok(res)
 }
 
-fn filter_path(p: &PathBuf, paths: &Vec<String>) -> Option<String> {
+fn filter_path(p: &Path, paths: &[String]) -> Option<String> {
     if let Some(p) = p.as_os_str().to_str() {
         if paths.contains(&p.to_string()) {
             None
@@ -138,7 +138,7 @@ fn filter_path(p: &PathBuf, paths: &Vec<String>) -> Option<String> {
     }
 }
 
-fn filter_config(env: &Env, config: Config, path_var_names: &Vec<String>, out_env: &mut FinalEnv) {
+fn filter_config(env: &Env, config: Config, path_var_names: &[String], out_env: &mut FinalEnv) {
     for (k, v) in &env.variables {
         if config.variables.contains(k) {
             continue;
@@ -150,7 +150,7 @@ fn filter_config(env: &Env, config: Config, path_var_names: &Vec<String>, out_en
                     if config.paths.contains_key(k) {
                         let mut paths = String::new();
                         for s in env::split_paths(&value).filter_map(|x| {
-                            filter_path(&x, &config.paths.get(k).expect("checked earlier"))
+                            filter_path(&x, config.paths.get(k).expect("checked earlier"))
                         }) {
                             paths = combine_path(paths, s.as_str(), ":");
                         }
@@ -172,25 +172,24 @@ fn filter_raw(
     mut env: Env,
     filter_file: Option<Env>,
     filter_str: Option<Env>,
-    path_var_names: &Vec<String>,
+    path_var_names: &[String],
 ) -> Result<Env, Error> {
     if let Some(filter) = filter_file {
         env.variables
-            .retain(|k, v| variable_filter(k, v, &filter.variables, &path_var_names));
+            .retain(|k, v| variable_filter(k, v, &filter.variables, path_var_names));
         env.bash_functions
             .retain(|k, v| function_filter(k, v, &filter.bash_functions));
     }
 
     if let Some(filter) = filter_str {
         env.variables
-            .retain(|k, v| variable_filter(k, v, &filter.variables, &path_var_names));
+            .retain(|k, v| variable_filter(k, v, &filter.variables, path_var_names));
         env.bash_functions
             .retain(|k, v| function_filter(k, v, &filter.bash_functions));
     }
 
-    env.variables.retain(|k, v| variable_filter_empty(k, v));
-    env.bash_functions
-        .retain(|k, v| function_filter_empty(k, v));
+    env.variables.retain(variable_filter_empty);
+    env.bash_functions.retain(function_filter_empty);
 
     Ok(env)
 }

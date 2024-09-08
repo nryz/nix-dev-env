@@ -25,7 +25,7 @@ impl<'a> IntoIterator for &'a BashFunctionsType {
     type IntoIter = <&'a HashMap<String, String> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        (&self.0).into_iter()
+        self.0.iter()
     }
 }
 
@@ -81,7 +81,7 @@ impl<'a> IntoIterator for &'a VariablesType {
     type IntoIter = <&'a HashMap<String, VariableValue> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        (&self.0).into_iter()
+        self.0.iter()
     }
 }
 
@@ -102,19 +102,19 @@ impl fmt::Display for VariablesType {
                     write!(f, "\n(Exported)     {} = \"{}\"", k, value)?
                 }
                 VariableValue::Array { value } => {
-                    write!(f, "\n(Array)        {} = [ \n", k)?;
+                    writeln!(f, "\n(Array)        {} = [ ", k)?;
 
                     for array_value in value {
-                        write!(f, "{}\n", array_value)?
+                        writeln!(f, "{}", array_value)?
                     }
 
                     write!(f, "    ]")?;
                 }
                 VariableValue::Associative { value } => {
-                    write!(f, "\n(Associative)  {} = [ \n", k)?;
+                    writeln!(f, "\n(Associative)  {} = [ ", k)?;
 
                     for map_value in value {
-                        write!(f, "        {} = \"{}\"\n", map_value.0, map_value.1)?
+                        writeln!(f, "        {} = \"{}\"", map_value.0, map_value.1)?
                     }
 
                     write!(f, "    ]")?;
