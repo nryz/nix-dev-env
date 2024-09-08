@@ -1,9 +1,13 @@
-// #![allow(dead_code)]
-
 use anyhow::{anyhow, Context, Error, Result};
 use clap::{Parser, ValueEnum};
+use config::Config;
+use nix::Env;
 use shell::{start_shell, ShellType};
-use std::path::{Path, PathBuf};
+use std::{
+    fs::{self, File},
+    io::BufReader,
+    path::{Path, PathBuf},
+};
 
 mod config;
 mod filter;
@@ -57,13 +61,46 @@ fn main() -> Result<(), Error> {
     let args = Cli::parse();
 
     let env = nix::get_dev_env(args.path)?;
-    let env = filter::filter(
-        env,
-        args.filter_file_raw,
-        args.filter_str_raw,
-        args.config_file,
-        args.config_str,
-    )?;
+
+    let mut config_file: Option<Config> = None;
+    if let Some(file) = args.config_file {
+        let reader = BufReader::new(File::open(&file).context("failed to open config file")?);
+        config_file = Some(serde_json::from_reader(reader).with_context(|| {
+            format!(
+                "failed to deserialize config file:\n{}",
+                fs::read_to_string(file.as_path()).expect("couldn't read file")
+            )
+        })?);
+    }
+
+    let mut config_str: Option<Config> = None;
+    if let Some(config) = args.config_str {
+        config_str = Some(
+            serde_json::from_str(&config)
+                .with_context(|| format!("failed to deserialise config json str:\n{}", config))?,
+        );
+    }
+
+    let mut filter_file: Option<Env> = None;
+    if let Some(file) = args.filter_file_raw {
+        let reader = BufReader::new(File::open(&file).context("failed to open filter file")?);
+        filter_file = Some(serde_json::from_reader(reader).with_context(|| {
+            format!(
+                "failed to deserialie filter file:\n{}",
+                fs::read_to_string(file.as_path()).expect("couldn't read file")
+            )
+        })?);
+    }
+
+    let mut filter_str: Option<Env> = None;
+    if let Some(filter) = args.filter_str_raw {
+        filter_str = Some(
+            serde_json::from_str(&filter)
+                .with_context(|| format!("failed to deserialize filter json str:\n{}", filter))?,
+        );
+    }
+
+    let env = filter::filter(env, filter_file, filter_str, config_file, config_str)?;
 
     let shell = if let Some(shell_type) = args.shell {
         shell_type

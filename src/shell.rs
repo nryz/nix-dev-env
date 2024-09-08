@@ -3,6 +3,8 @@ use anyhow::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
+use std::io::stdout;
+use std::io::Write;
 use std::{os::unix::process::CommandExt, process::Command};
 use strum_macros::AsRefStr;
 
@@ -22,8 +24,12 @@ pub enum VariableValue {
     Associative { value: HashMap<String, String> },
 }
 
-fn combine_path(a: String, b: &str, split: &str) -> String {
-    a + split + b
+pub fn combine_path(a: String, b: &str, split: &str) -> String {
+    if a.is_empty() {
+        a + b
+    } else {
+        a + split + b
+    }
 }
 
 pub fn start_shell(env: &FinalEnv, shell: ShellType, only_print: bool) -> Result<(), Error> {
@@ -42,7 +48,9 @@ pub fn start_shell(env: &FinalEnv, shell: ShellType, only_print: bool) -> Result
     }
 
     if only_print {
-        print!("env:\n{:?}", env);
+        let stdout = stdout();
+        let mut stdout = stdout.lock();
+        write!(stdout, "env:\n{}", env)?;
 
         Ok(())
     } else {
